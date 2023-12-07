@@ -1,0 +1,7 @@
+{
+    "title": "Exporting A Bitable To A Markdown Table",
+    "exportVisibleButtonText": "Export current page",
+    "exportSelectedButtonText": "Select the section to export",
+    "initializingText": "Loading...",
+    "errorMsgGetSelectionFailed": "Fetch table failed"
+}

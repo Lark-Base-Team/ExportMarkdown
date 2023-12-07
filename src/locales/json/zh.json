@@ -1,0 +1,7 @@
+{
+    "title": "将多维表格导出为Markdown表格",
+    "exportVisibleButtonText": "导出当前页",
+    "exportSelectedButtonText": "选择要导出的部分",
+    "initializingText": "加载表格中...",
+    "errorMsgGetSelectionFailed": "获取表格信息失败"
+}
