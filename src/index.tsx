@@ -1,25 +1,41 @@
+/* eslint-disable no-console */
 import { Button, Spin, TextArea } from "@douyinfe/semi-ui";
-import { ITable, IView, ToastType, bitable } from "@lark-base-open/js-sdk";
+import {
+  IField,
+  ITable,
+  IView,
+  ToastType,
+  bitable,
+} from "@lark-base-open/js-sdk";
+import ClipboardJS from "clipboard";
 import json2md from "json2md";
 import React, { useCallback, useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
+import Sizes from "./consts/Sizes";
 import i18n from "./locales/i18n";
 
 /**
  * LoadApp component for exporting table data to Markdown format.
  */
 const LoadApp = () => {
+  new ClipboardJS(".clipboard");
+
   // State variables
   const [isReady, setIsReady] = useState(false);
   const [isLoadingVisible, setIsLoadingVisible] = useState(false);
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
+  const [activeTable, setActiveTable] = useState<ITable | undefined>(undefined);
+  const [totalLines, setTotalLines] = useState(0);
+  const [currentLines, setCurrentLines] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [md, setMD] = useState("");
 
   // Initialize the component
   useEffect(() => {
     const f = async () => {
       // Fetch active table data asynchronously
-      await bitable.base.getActiveTable();
+      const table = await bitable.base.getActiveTable();
+      setActiveTable(table);
       setIsReady(true);
     };
     f();
@@ -42,35 +58,56 @@ const LoadApp = () => {
       view?: IView;
       recordIdList: (string | undefined)[];
     }) => {
-      if (!table) {
-        table = await bitable.base.getActiveTable();
-      }
-      if (!view) {
-        view = await table.getActiveView();
-      }
-      // Get field metadata for the view
-      const fieldMetaList = await view.getFieldMetaList();
-
-      // Prepare table headers
-      const headers = fieldMetaList.map((f) => f.name);
-      const rows = [];
-
-      // Iterate over recordIdList and fetch cell data
-      for (const recordId of recordIdList) {
-        if (!recordId) {
-          continue;
+      try {
+        setTotalLines(recordIdList.length);
+        if (!table) {
+          table = await bitable.base.getActiveTable();
         }
-        const row: string[] = [];
+        if (!view) {
+          view = await table.getActiveView();
+        }
+        // Get field metadata for the view
+        const fieldMetaList = await view.getFieldMetaList();
+        const fields: IField[] = [];
         for (const fieldMeta of fieldMetaList) {
           const field = await table.getFieldById(fieldMeta.id);
-          let cellString = await field.getCellString(recordId);
-          row.push(cellString);
+          fields.push(field);
         }
-        rows.push(row);
-      }
+        // Prepare table headers
+        const headers = fieldMetaList.map((f) => f.name);
+        const rows = [];
 
-      // Convert data to Markdown format
-      setMD(json2md([{ table: { headers, rows } }]));
+        // Iterate over recordIdList and fetch cell data
+        let lines = 1;
+        for (const recordId of recordIdList) {
+          setCurrentLines(lines++);
+          if (!recordId) {
+            continue;
+          }
+
+          const timeStart = Date.now();
+          const row: string[] = [];
+          for (const field of fields) {
+            const cellString = await field.getCellString(recordId);
+            row.push(cellString);
+          }
+          rows.push(row);
+          const timeEnd = Date.now();
+          setDuration(timeEnd - timeStart);
+        }
+
+        // Convert data to Markdown format
+        setMD(json2md([{ table: { headers, rows } }]));
+      } catch (err: any) {
+        await bitable.ui.showToast({
+          toastType: ToastType.error,
+          message: i18n.t("errorMsgExportFailed"),
+        });
+      } finally {
+        setTotalLines(0);
+        setCurrentLines(0);
+        setDuration(0);
+      }
     },
     []
   );
@@ -81,17 +118,19 @@ const LoadApp = () => {
   const exportVisible = useCallback(async () => {
     setIsLoadingVisible(true);
     try {
-      const table = await bitable.base.getActiveTable();
-      const view = await table.getActiveView();
+      if (!activeTable) {
+        return;
+      }
+      const view = await activeTable.getActiveView();
       const recordIdList = await view.getVisibleRecordIdList();
       if (!recordIdList) {
         return;
       }
-      await exportToMarkDown({ table, view, recordIdList });
+      await exportToMarkDown({ table: activeTable, view, recordIdList });
     } finally {
       setIsLoadingVisible(false);
     }
-  }, []);
+  }, [activeTable, exportToMarkDown]);
 
   /**
    * Export selected table data to Markdown format.
@@ -108,24 +147,46 @@ const LoadApp = () => {
         return;
       }
       const recordIdList = await bitable.ui.selectRecordIdList(tableId, viewId);
-      await exportToMarkDown({ recordIdList });
+      await exportToMarkDown({ table: activeTable, recordIdList });
     } finally {
       setIsLoadingSelected(false);
     }
+  }, [activeTable, exportToMarkDown]);
+
+  /**
+   * Copy the Markdown text to clipboard.
+   */
+  const copyToClipboard = useCallback(async () => {
+    bitable.ui.showToast({
+      message: i18n.t("successMsgCopied"),
+      toastType: ToastType.success,
+    });
   }, []);
+
+  /**
+   * Export the Markdown text to a file and download.
+   */
+  const download = useCallback(async () => {
+    try {
+      const blob = new Blob([md], { type: "text/plain" });
+      const downloadLink = document.createElement("a");
+      downloadLink.href = URL.createObjectURL(blob);
+      downloadLink.download = `table-${Date.now()}.md`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    } catch (err: any) {
+      bitable.ui.showToast({
+        message: i18n.t("errorMsgDownloadFailed"),
+        toastType: ToastType.error,
+      });
+    }
+  }, [md]);
 
   // Render loading screen if not ready
   if (!isReady) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: 8,
-        }}
-      >
+      <div style={styles.loadingContainer}>
         <div>
           <Spin size="middle" />
         </div>
@@ -136,32 +197,66 @@ const LoadApp = () => {
 
   // Render the main component
   return (
-    <div
-      style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        gap: 8,
-      }}
-    >
-      <h4>{i18n.t("title")}</h4>
-      <Button
-        theme="solid"
-        loading={isLoadingVisible}
-        disabled={isLoadingSelected}
-        onClick={exportVisible}
-      >
-        {i18n.t("exportVisibleButtonText")}
-      </Button>
-      <Button
-        theme="solid"
-        loading={isLoadingSelected}
-        disabled={isLoadingVisible}
-        onClick={exportSelected}
-      >
-        {i18n.t("exportSelectedButtonText")}
-      </Button>
-      {md && <TextArea value={md} autosize />}
+    <div style={styles.container}>
+      <div style={styles.titleText}>{i18n.t("title")}</div>
+      <div style={styles.buttonGroupContainer}>
+        <Button
+          theme="solid"
+          loading={isLoadingVisible}
+          disabled={isLoadingSelected}
+          onClick={exportVisible}
+        >
+          {i18n.t("exportVisibleButtonText")}
+        </Button>
+        <Button
+          theme="solid"
+          loading={isLoadingSelected}
+          disabled={isLoadingVisible}
+          onClick={exportSelected}
+        >
+          {i18n.t("exportSelectedButtonText")}
+        </Button>
+      </div>
+
+      {(isLoadingVisible || isLoadingSelected) && totalLines > 0 && (
+        <div style={styles.exportingInfoContianer}>
+          <div style={styles.exportingInfoText}>
+            {i18n.t("exportingText")} {currentLines}/{totalLines}
+          </div>
+
+          {duration > 0 && (
+            <div style={styles.exportingInfoText}>
+              {i18n.t("extimatedTimeText")}
+              {Math.floor(((totalLines - currentLines) * duration) / 1000)}
+              {i18n.t("extimatedTimeUnitText")}
+            </div>
+          )}
+        </div>
+      )}
+
+      {md && (
+        <TextArea
+          id="markdownText"
+          value={md}
+          autosize={{ minRows: 3, maxRows: 10 }}
+        />
+      )}
+      {md && (
+        <div style={styles.buttonGroupContainer}>
+          <Button
+            className="clipboard"
+            theme="solid"
+            data-clipboard-text={md}
+            onClick={copyToClipboard}
+          >
+            {i18n.t("copyButtonText")}
+          </Button>
+
+          <Button theme="solid" onClick={download}>
+            {i18n.t("downloadButtonText")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
@@ -172,3 +267,40 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <LoadApp />
   </React.StrictMode>
 );
+
+interface StyleSheet {
+  [key: string]: React.CSSProperties;
+}
+
+const styles: StyleSheet = {
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Sizes.smallX,
+  },
+  container: {
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    gap: Sizes.smallX,
+  },
+  titleText: {
+    fontWeight: 800,
+    fontSize: Sizes.medium,
+  },
+  buttonGroupContainer: {
+    display: "flex",
+    flexDirection: "row",
+    gap: Sizes.smallX,
+  },
+  exportingInfoContianer: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  exportingInfoText: {
+    fontWeight: 800,
+    fontSize: Sizes.regular,
+  },
+};

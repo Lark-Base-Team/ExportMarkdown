@@ -2,6 +2,15 @@
     "title": "Exporting A Bitable To A Markdown Table",
     "exportVisibleButtonText": "Export current page",
     "exportSelectedButtonText": "Select the section to export",
+    "errorMsgExportFailed": "Export Failed",
     "initializingText": "Loading...",
-    "errorMsgGetSelectionFailed": "Fetch table failed"
+    "errorMsgGetSelectionFailed": "Fetch table failed",
+    "copyButtonText": "Copy",
+    "copiedMsg": "Copied to Clipboard",
+    "successMsgCopied": "Copied to Clipboard",
+    "downloadButtonText": "Download",
+    "errorMsgDownloadFailed": "Download Failed",
+    "exportingText": "Exporting: ",
+    "extimatedTimeText": "Estimated Time: ",
+    "extimatedTimeUnitText": "s"
 }

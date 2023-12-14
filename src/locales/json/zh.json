@@ -2,6 +2,14 @@
     "title": "将多维表格导出为Markdown表格",
     "exportVisibleButtonText": "导出当前页",
     "exportSelectedButtonText": "选择要导出的部分",
+    "errorMsgExportFailed": "导出失败",
     "initializingText": "加载表格中...",
-    "errorMsgGetSelectionFailed": "获取表格信息失败"
+    "errorMsgGetSelectionFailed": "获取表格信息失败",
+    "copyButtonText": "复制",
+    "successMsgCopied": "已复制剪贴板",
+    "downloadButtonText": "下载",
+    "errorMsgDownloadFailed": "下载失败",
+    "exportingText": "正在导出：",
+    "extimatedTimeText": "剩余时间：",
+    "extimatedTimeUnitText": "秒"
 }
