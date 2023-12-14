@@ -227,7 +227,7 @@ const LoadApp = () => {
           {duration > 0 && (
             <div style={styles.exportingInfoText}>
               {i18n.t("extimatedTimeText")}
-              {Math.floor(((totalLines - currentLines) * duration) / 1000)}
+              {Math.ceil(((totalLines - currentLines) * duration) / 1000)}
               {i18n.t("extimatedTimeUnitText")}
             </div>
           )}
@@ -236,9 +236,11 @@ const LoadApp = () => {
 
       {md && (
         <TextArea
-          id="markdownText"
           value={md}
-          autosize={{ minRows: 3, maxRows: 10 }}
+          autosize={{
+            minRows: 3,
+            maxRows: window ? window.innerHeight / 2 / 20 : 10,
+          }}
         />
       )}
       {md && (
