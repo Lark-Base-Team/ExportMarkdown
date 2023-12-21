@@ -12,5 +12,6 @@
     "errorMsgDownloadFailed": "Download Failed",
     "exportingText": "Exporting: ",
     "extimatedTimeText": "Estimated Time: ",
-    "extimatedTimeUnitText": "s"
+    "extimatedTimeUnitText": "s",
+    "checkboxText": "Include Invisible Fields"
 }

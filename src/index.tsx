@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { Button, Spin, TextArea } from "@douyinfe/semi-ui";
+import { Button, Checkbox, Spin, TextArea } from "@douyinfe/semi-ui";
 import {
   IField,
   ITable,
@@ -25,6 +25,7 @@ const LoadApp = () => {
   const [isLoadingVisible, setIsLoadingVisible] = useState(false);
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
   const [activeTable, setActiveTable] = useState<ITable | undefined>(undefined);
+  const [exportAllFields, setExportAllFields] = useState(false);
   const [totalLines, setTotalLines] = useState(0);
   const [currentLines, setCurrentLines] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -66,18 +67,25 @@ const LoadApp = () => {
         if (!view) {
           view = await table.getActiveView();
         }
+        let visibleFieldIdList: string[] | undefined = undefined;
+        if (!exportAllFields) {
+          visibleFieldIdList = await view.getVisibleFieldIdList();
+        }
         // Get field metadata for the view
         const fieldMetaList = await view.getFieldMetaList();
         const fields: IField[] = [];
+        const headers: string[] = [];
         for (const fieldMeta of fieldMetaList) {
           const field = await table.getFieldById(fieldMeta.id);
+          if (!exportAllFields && !visibleFieldIdList?.includes(fieldMeta.id)) {
+            continue;
+          }
           fields.push(field);
+          headers.push(fieldMeta.name);
         }
-        // Prepare table headers
-        const headers = fieldMetaList.map((f) => f.name);
-        const rows = [];
 
         // Iterate over recordIdList and fetch cell data
+        const rows = [];
         let lines = 1;
         for (const recordId of recordIdList) {
           setCurrentLines(lines++);
@@ -109,7 +117,7 @@ const LoadApp = () => {
         setDuration(0);
       }
     },
-    []
+    [exportAllFields]
   );
 
   /**
@@ -216,6 +224,13 @@ const LoadApp = () => {
         >
           {i18n.t("exportSelectedButtonText")}
         </Button>
+        <Checkbox
+          checked={exportAllFields}
+          onChange={() => setExportAllFields(!exportAllFields)}
+          style={styles.selectorCheckbox}
+        >
+          {i18n.t("checkboxText")}
+        </Checkbox>
       </div>
 
       {(isLoadingVisible || isLoadingSelected) && totalLines > 0 && (
@@ -296,6 +311,7 @@ const styles: StyleSheet = {
     display: "flex",
     flexDirection: "row",
     gap: Sizes.smallX,
+    alignItems: "center",
   },
   exportingInfoContianer: {
     display: "flex",

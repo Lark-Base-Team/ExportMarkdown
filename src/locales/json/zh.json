@@ -11,5 +11,6 @@
     "errorMsgDownloadFailed": "下载失败",
     "exportingText": "正在导出：",
     "extimatedTimeText": "剩余时间：",
-    "extimatedTimeUnitText": "秒"
+    "extimatedTimeUnitText": "秒",
+    "checkboxText": "包含隐藏字段"
 }
