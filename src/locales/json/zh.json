@@ -12,5 +12,6 @@
     "exportingText": "正在导出：",
     "extimatedTimeText": "剩余时间：",
     "extimatedTimeUnitText": "秒",
-    "checkboxText": "包含隐藏字段"
+    "checkboxText": "包含隐藏字段",
+    "errorMsgNoPermission": "没有下载权限"
 }

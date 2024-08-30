@@ -1,11 +1,14 @@
 /* eslint-disable no-console */
 import { Button, Checkbox, Spin, TextArea } from "@douyinfe/semi-ui";
 import {
+  base,
+  bitable,
   IField,
   ITable,
   IView,
+  OperationType,
+  PermissionEntity,
   ToastType,
-  bitable,
 } from "@lark-base-open/js-sdk";
 import ClipboardJS from "clipboard";
 import json2md from "json2md";
@@ -43,6 +46,23 @@ const LoadApp = () => {
   }, []);
 
   /**
+   * Check if the user has the permission to export.
+   */
+  const checkExportPermission = useCallback(async () => {
+    const hasPermission = await base.getPermission({
+      entity: PermissionEntity.Base,
+      type: OperationType.Printable,
+    });
+
+    if (!hasPermission) {
+      bitable.ui.showToast({
+        message: i18n.t("errorMsgNoPermission"),
+        toastType: ToastType.error,
+      });
+    }
+  }, []);
+
+  /**
    * Export table data to Markdown format.
    * @param {Object} options - Export options.
    * @param {ITable} options.table - The table to export.
@@ -50,15 +70,7 @@ const LoadApp = () => {
    * @param {string[]} options.recordIdList - List of record IDs to export.
    */
   const exportToMarkDown = useCallback(
-    async ({
-      table,
-      view,
-      recordIdList,
-    }: {
-      table?: ITable;
-      view?: IView;
-      recordIdList: (string | undefined)[];
-    }) => {
+    async ({ table, view, recordIdList }: { table?: ITable; view?: IView; recordIdList: (string | undefined)[] }) => {
       try {
         setTotalLines(recordIdList.length);
         if (!table) {
@@ -125,6 +137,7 @@ const LoadApp = () => {
    */
   const exportVisible = useCallback(async () => {
     setIsLoadingVisible(true);
+    await checkExportPermission();
     try {
       if (!activeTable) {
         return;
@@ -138,13 +151,14 @@ const LoadApp = () => {
     } finally {
       setIsLoadingVisible(false);
     }
-  }, [activeTable, exportToMarkDown]);
+  }, [activeTable, exportToMarkDown, checkExportPermission]);
 
   /**
    * Export selected table data to Markdown format.
    */
   const exportSelected = useCallback(async () => {
     setIsLoadingSelected(true);
+    await checkExportPermission();
     try {
       const { tableId, viewId } = await bitable.base.getSelection();
       if (!tableId || !viewId) {
@@ -159,7 +173,7 @@ const LoadApp = () => {
     } finally {
       setIsLoadingSelected(false);
     }
-  }, [activeTable, exportToMarkDown]);
+  }, [activeTable, exportToMarkDown, checkExportPermission]);
 
   /**
    * Copy the Markdown text to clipboard.
@@ -208,20 +222,10 @@ const LoadApp = () => {
     <div style={styles.container}>
       <div style={styles.titleText}>{i18n.t("title")}</div>
       <div style={styles.buttonGroupContainer}>
-        <Button
-          theme="solid"
-          loading={isLoadingVisible}
-          disabled={isLoadingSelected}
-          onClick={exportVisible}
-        >
+        <Button theme="solid" loading={isLoadingVisible} disabled={isLoadingSelected} onClick={exportVisible}>
           {i18n.t("exportVisibleButtonText")}
         </Button>
-        <Button
-          theme="solid"
-          loading={isLoadingSelected}
-          disabled={isLoadingVisible}
-          onClick={exportSelected}
-        >
+        <Button theme="solid" loading={isLoadingSelected} disabled={isLoadingVisible} onClick={exportSelected}>
           {i18n.t("exportSelectedButtonText")}
         </Button>
         <Checkbox
@@ -260,12 +264,7 @@ const LoadApp = () => {
       )}
       {md && (
         <div style={styles.buttonGroupContainer}>
-          <Button
-            className="clipboard"
-            theme="solid"
-            data-clipboard-text={md}
-            onClick={copyToClipboard}
-          >
+          <Button className="clipboard" theme="solid" data-clipboard-text={md} onClick={copyToClipboard}>
             {i18n.t("copyButtonText")}
           </Button>
 

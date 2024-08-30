@@ -13,5 +13,6 @@
     "exportingText": "Exporting: ",
     "extimatedTimeText": "Estimated Time: ",
     "extimatedTimeUnitText": "s",
-    "checkboxText": "Include Invisible Fields"
+    "checkboxText": "Include Invisible Fields",
+    "errorMsgNoPermission": "No permission to export"
 }
