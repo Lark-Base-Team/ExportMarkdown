@@ -13,6 +13,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "output": "dist",
   "dependencies": {
     "@douyinfe/semi-ui": "^2.48.0",
     "@lark-base-open/js-sdk": "^0.4.0",
