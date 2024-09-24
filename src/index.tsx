@@ -33,7 +33,8 @@ const LoadApp = () => {
   const [currentLines, setCurrentLines] = useState(0);
   const [duration, setDuration] = useState(0);
   const [md, setMD] = useState("");
-
+  const [loadingTip, setLoadingTip] = useState('00/00');
+  const [isLoading, setLoading] = useState(false);
   // Initialize the component
   useEffect(() => {
     const f = async () => {
@@ -143,7 +144,18 @@ const LoadApp = () => {
         return;
       }
       const view = await activeTable.getActiveView();
-      const recordIdList = await view.getVisibleRecordIdList();
+      let recordIdData;
+      const recordIdList = [];
+      let token = undefined as any;
+      
+      setLoading(true);
+      do {
+        recordIdData = await view.getVisibleRecordIdListByPage(token ? { pageToken: token, pageSize: 200 } : { pageSize: 200 });
+        token = recordIdData.pageToken;
+        setLoadingTip(`${((token > 200 ? (token - 200) : 0) / recordIdData.total * 100).toFixed(2)}%`)
+        recordIdList.push(...recordIdData.recordIds);
+      } while (recordIdData.hasMore);
+      setLoading(false);
       if (!recordIdList) {
         return;
       }
@@ -219,61 +231,63 @@ const LoadApp = () => {
 
   // Render the main component
   return (
-    <div style={styles.container}>
-      <div style={styles.titleText}>{i18n.t("title")}</div>
-      <div style={styles.buttonGroupContainer}>
-        <Button theme="solid" loading={isLoadingVisible} disabled={isLoadingSelected} onClick={exportVisible}>
-          {i18n.t("exportVisibleButtonText")}
-        </Button>
-        <Button theme="solid" loading={isLoadingSelected} disabled={isLoadingVisible} onClick={exportSelected}>
-          {i18n.t("exportSelectedButtonText")}
-        </Button>
-        <Checkbox
-          checked={exportAllFields}
-          onChange={() => setExportAllFields(!exportAllFields)}
-          style={styles.selectorCheckbox}
-        >
-          {i18n.t("checkboxText")}
-        </Checkbox>
-      </div>
-
-      {(isLoadingVisible || isLoadingSelected) && totalLines > 0 && (
-        <div style={styles.exportingInfoContianer}>
-          <div style={styles.exportingInfoText}>
-            {i18n.t("exportingText")} {currentLines}/{totalLines}
-          </div>
-
-          {duration > 0 && (
-            <div style={styles.exportingInfoText}>
-              {i18n.t("extimatedTimeText")}
-              {Math.ceil(((totalLines - currentLines) * duration) / 1000)}
-              {i18n.t("extimatedTimeUnitText")}
-            </div>
-          )}
-        </div>
-      )}
-
-      {md && (
-        <TextArea
-          value={md}
-          autosize={{
-            minRows: 3,
-            maxRows: window ? window.innerHeight / 2 / 20 : 10,
-          }}
-        />
-      )}
-      {md && (
+    <Spin tip={loadingTip} spinning={isLoading}>
+      <div style={styles.container}>
+        <div style={styles.titleText}>{i18n.t("title")}</div>
         <div style={styles.buttonGroupContainer}>
-          <Button className="clipboard" theme="solid" data-clipboard-text={md} onClick={copyToClipboard}>
-            {i18n.t("copyButtonText")}
+          <Button theme="solid" loading={isLoadingVisible} disabled={isLoadingSelected} onClick={exportVisible}>
+            {i18n.t("exportVisibleButtonText")}
           </Button>
-
-          <Button theme="solid" onClick={download}>
-            {i18n.t("downloadButtonText")}
+          <Button theme="solid" loading={isLoadingSelected} disabled={isLoadingVisible} onClick={exportSelected}>
+            {i18n.t("exportSelectedButtonText")}
           </Button>
+          <Checkbox
+            checked={exportAllFields}
+            onChange={() => setExportAllFields(!exportAllFields)}
+            style={styles.selectorCheckbox}
+          >
+            {i18n.t("checkboxText")}
+          </Checkbox>
         </div>
-      )}
-    </div>
+
+        {(isLoadingVisible || isLoadingSelected) && totalLines > 0 && (
+          <div style={styles.exportingInfoContianer}>
+            <div style={styles.exportingInfoText}>
+              {i18n.t("exportingText")} {currentLines}/{totalLines}
+            </div>
+
+            {duration > 0 && (
+              <div style={styles.exportingInfoText}>
+                {i18n.t("extimatedTimeText")}
+                {Math.ceil(((totalLines - currentLines) * duration) / 1000)}
+                {i18n.t("extimatedTimeUnitText")}
+              </div>
+            )}
+          </div>
+        )}
+
+        {md && (
+          <TextArea
+            value={md}
+            autosize={{
+              minRows: 3,
+              maxRows: window ? window.innerHeight / 2 / 20 : 10,
+            }}
+          />
+        )}
+        {md && (
+          <div style={styles.buttonGroupContainer}>
+            <Button className="clipboard" theme="solid" data-clipboard-text={md} onClick={copyToClipboard}>
+              {i18n.t("copyButtonText")}
+            </Button>
+
+            <Button theme="solid" onClick={download}>
+              {i18n.t("downloadButtonText")}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Spin>
   );
 };
 
